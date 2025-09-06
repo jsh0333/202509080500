@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>대형폐기물 스티커 수수료 자동 계산기 · 정식표 기반</title>
+<meta name="description" content="가구류·가전제품류·기타생활용품·무상수거제품 전 항목 수수료표 기반 자동 계산기 — A4 한 장 인쇄 및 링크 공유 지원" />
+<style>
+:root{ --accent:#2952ff; --bg:#f7f7fb; --card:#ffffff; --text:#222; --theadTop:76px; --theadTopMobile:124px; --print-zoom:1; }
+*{ box-sizing:border-box; }
+body{ margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans KR', Arial, sans-serif; color:var(--text); background:var(--bg); padding-top: calc(var(--adbarH, 170px) + 8px); padding-bottom: calc(var(--bottomSafe, 90px) + env(safe-area-inset-bottom)); overscroll-behavior-y: none; }
+
+/* ===== 상단 고정 배너 (원복 느낌, 크게) ===== */
+.adbar-wrap{ position:fixed; left:0; right:0; top:0; z-index:40; background:#fff; border-bottom:1px solid #e8e8ee; }
+.adbar{ max-width:1100px; margin:0 auto; padding:10px 14px; }
+.adcard{ position:relative; display:flex; align-items:center; gap:14px; width:100%; min-height:160px; border:1px solid #e7e7ef; background:linear-gradient(180deg,#ffffff,#f8faff); border-radius:14px; overflow:hidden; padding:16px; text-decoration:none; color:inherit; }
+.admedia{ width:150px; height:100px; border-radius:12px; overflow:hidden; flex:0 0 auto; background:#eef2ff; display:flex; align-items:center; justify-content:center; }
+.admedia img{ width:100%; height:100%; object-fit:cover; display:block; }
+.admeta{ flex:1; min-width:0; }
+.adtitle{ margin:0 0 6px; font-size:18px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.addesc{ margin:0; font-size:14px; color:#4b5563; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.adcta{ margin-left:auto; flex:0 0 auto; }
+.adcta{ display:none !important; }
+.adbadge{ position:absolute; left:12px; top:12px; font-size:11px; color:#fff; background:#111827; padding:4px 6px; border-radius:999px; opacity:.85; }
+.addots{ display:flex; gap:6px; align-items:center; justify-content:flex-end; margin-top:6px; }
+.addots button{ width:8px; height:8px; border-radius:999px; border:1px solid #cfd6ff; background:#fff; cursor:pointer; }
+.addots button.active{ background:#2952ff; border-color:#2952ff; }
+@media (max-width:720px){ .admedia{ width:200px; height:120px; } .addesc{ display:none; } }
+
+/* ===== 헤더/툴바 ===== */
+header{ position:sticky; top: var(--adbarH, 160px); z-index:30; background:linear-gradient(180deg,#fff 70%, transparent); border-bottom:1px solid #e8e8ee; }
+.wrap{ max-width:1100px; margin:0 auto; padding:18px 14px; }
+h1{ margin:0 0 8px; font-size:22px; }
+.tools{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.tools>*{ background:var(--card); border:1px solid #e7e7ef; border-radius:10px; padding:10px 12px; }
+select{ border:none; outline:none; font-size:14px; width:220px; }
+.btn{ border:none; background:var(--accent); color:#fff; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600; }
+.btn.subtle{ background:#fff; color:#333; border:1px solid #e7e7ef; }
+.note{ font-size:12px; color:#666; margin-left:auto; }
+main .wrap{ padding-top:6px; }
+
+/* ===== 표 ===== */
+table{ width:100%; border-collapse:collapse; background:var(--card); border:1px solid #ececf3; border-radius:12px; overflow:hidden; }
+thead th{ position:static; top:auto; z-index:auto; background:#fcfcff; border-bottom:1px solid #ececf3; font-size:13px; padding:10px; }
+@media (max-width:720px){ thead th{ top:auto; } }
+
+tbody td{ border-bottom:1px solid #f1f1f6; padding:10px; font-size:14px; text-align:center; }
+tbody tr:hover{ background:#fafaff; }
+.left{ text-align:left; }
+
+.qtybox{ display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.qbtn{ min-width:28px; height:28px; line-height:26px; border-radius:8px; border:1px solid #dfe3f0; background:#fff; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; user-select:none; }
+.qbtn:active{ transform:translateY(1px); }
+.qty{ min-width:24px; display:inline-block; text-align:center; font-variant-numeric:tabular-nums; }
+
+tfoot td{ padding:10px; background:#fafaff; }
+
+/* ===== 총합 바 ===== */
+.floating-total{ position:fixed; left:0; right:0; bottom:0; z-index:50; background:#111827; color:#fff; padding:12px 14px; box-shadow:0 -4px 16px rgba(0,0,0,.12); will-change:transform; }
+.total-wrap{ max-width:1100px; margin:0 auto; display:flex; gap:10px; align-items:center; }
+.total-amount{ font-size:18px; font-weight:800; margin-right:auto; }
+.small{ font-size:12px; opacity:.9; }
+.hide-on-mobile{ display:block; }
+
+/* ===== 미리보기 모달 ===== */
+.modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:50; }
+.modal.show{ display:flex; }
+.backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.45); }
+.sheet{ position:relative; max-width:900px; width:92%; max-height:80vh; overflow:auto; background:#fff; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.2); }
+.sheet header{ position:sticky; top:0; background:#fff; border-bottom:1px solid #eee; padding:12px 16px; display:flex; gap:10px; align-items:center; }
+.sheet h3{ margin:0; font-size:18px; }
+.sheet .close{ margin-left:auto; border:1px solid #e5e7eb; background:#fff; border-radius:8px; padding:6px 10px; cursor:pointer; }
+.sheet .content{ padding:16px; }
+.sheet table{ width:100%; border-collapse:collapse; }
+.sheet th,.sheet td{ border:1px solid #eee; padding:8px; text-align:center; }
+.sheet tfoot td{ background:#fafafa; font-weight:700; }
+
+/* 미리보기 내 배너 확인 박스 */
+.ad-preview{ display:flex; gap:12px; align-items:center; border:1px dashed #cfd6ff; background:#f9fbff; padding:10px; border-radius:10px; margin-bottom:12px; }
+.ad-preview .ap-left{ width:220px; height:118px; border-radius:10px; overflow:hidden; background:#eef2ff; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+.ad-preview img{ width:100%; height:100%; object-fit:cover; display:block; }
+.ad-preview .ap-title{ font-weight:800; margin-bottom:4px; }
+.ad-preview .ap-desc{ color:#4b5563; font-size:14px; margin-bottom:6px; }
+.ad-preview a{ display:inline-block; padding:6px 10px; border:1px solid #dbe2ff; border-radius:8px; text-decoration:none; }
+
+/* 플로팅 미리보기 버튼 */
+.fpv-btn{ position:fixed; right:16px; bottom: calc(84px + env(safe-area-inset-bottom)); z-index:60; background:#2952ff; color:#fff; border-radius:999px; padding:10px 14px; border:none; box-shadow:0 6px 16px rgba(0,0,0,.15); cursor:pointer; font-weight:700; will-change:transform; }
+
+/* 분류 점프 하이라이트 */
+.jump-flash{ animation:flash 1.2s ease-out; }
+@keyframes flash{ 0%{ background:#fff4cc; } 100%{ background:transparent; } }
+
+/* 인쇄 전용: 프린트 컨테이너 한 장만 */
+@media print{
+  @page{ size:A4 portrait; margin:10mm; }
+  #___printMeasure{ display:none !important; }
+  body>*:not(#__print__){ display:none !important; }
+  #__print__{ display:block !important; width:190mm; margin:0 auto; background:#fff; zoom:var(--print-zoom); }
+  #__print__ table{ width:100%; border-collapse:collapse; font-size:11px; }
+  #__print__ th,#__print__ td{ border:1px solid #ddd; padding:6px 8px; text-align:center; }
+  #__print__ table, #__print__ tr, #__print__ td, #__print__ th{ page-break-inside:avoid !important; break-inside:avoid-page !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 상단 고정 배너 ===== -->
+<div class="adbar-wrap" id="adbarWrap">
+  <div class="adbar">
+    <a class="adcard" id="adCard" href="#" target="_blank" rel="noopener nofollow sponsored">
+      <span class="adbadge">광고</span>
+      <div class="admedia"><img id="adImg" alt="광고 이미지" loading="lazy" referrerpolicy="no-referrer" /></div>
+      <div class="admeta">
+        <p class="adtitle" id="adTitle">강동구 이사/정리 전문 · 오늘 방문 견적</p>
+        <p class="addesc" id="adDesc">당일 수거 · 카드/현금 영수증 · 온라인 예약 3% 할인</p>
+      </div>
+      <!-- adcta removed per user request -->
+    </a>
+    <div class="addots" id="adDots" aria-label="광고 넘기기 점 표시" style="display:none"></div>
+  </div>
+</div>
+
+<header>
+  <div class="wrap">
+    <h1>대형폐기물 스티커 수수료 자동 계산기</h1>
+    <div class="tools">
+      <div>
+        <strong>분류</strong>
+        <select id="category">
+          <option value="ALL">전체 보기</option>
+          <option>가구류</option>
+          <option>가전제품류</option>
+          <option>기타생활용품</option>
+          <option>무상수거제품</option>
+        </select>
+      </div>
+      <button class="btn" id="previewBtn" type="button" title="선택 항목과 합계를 한눈에 보기">미리보기</button>
+      <button class="btn subtle" id="clearBtn" type="button" title="모든 수량을 0으로 초기화">수량 초기화</button>
+      <span class="note">표 기준 · 지역에 따라 실제 수수료가 다를 수 있습니다.</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="hide-on-mobile">분류</th>
+          <th>품목</th>
+          <th>규격</th>
+          <th>수수료(원)</th>
+          <th>수량</th>
+          <th>금액</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <p class="small">※ 이 계산기는 안내용입니다. 실제 신고·스티커 발급은 해당 지자체 시스템을 이용해 주세요.</p>
+  </div>
+</main>
+
+<div class="floating-total" id="totalBar">
+  <div class="total-wrap">
+    <div class="total-amount" id="grandTotal">총 합계: 0 원</div>
+  </div>
+</div>
+
+<!-- 미리보기 모달 -->
+<div class="modal" id="previewModal" aria-hidden="true">
+  <div class="backdrop" id="previewBackdrop"></div>
+  <div class="sheet">
+    <header>
+      <h3>대형폐기물 배출 내역 미리보기</h3>
+      <button class="close" id="previewClose" type="button">닫기</button>
+    </header>
+    <div class="content">
+      <!-- 배너 미리보기: 여기에 넣은 이미지 주소가 보입니다 -->
+      <div class="ad-preview" id="adPreviewBox">
+        <div class="ap-left"><img id="adPreviewImg" alt="배너 미리보기" referrerpolicy="no-referrer" /></div>
+        <div class="ap-right">
+          <div class="ap-title" id="adPreviewTitle"></div>
+          <div class="ap-desc" id="adPreviewDesc"></div>
+          <a id="adPreviewLink" href="#" target="_blank" rel="noopener nofollow sponsored">배너 링크 열기</a>
+        </div>
+      </div>
+
+      <div id="previewEmpty" style="padding:8px 0;color:#666;">선택한 품목이 없습니다. 표에서 수량을 추가해 주세요.</div>
+      <div id="previewBody" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th>품목</th>
+              <th>규격</th>
+              <th>단가(원)</th>
+              <th>수량</th>
+              <th>금액(원)</th>
+            </tr>
+          </thead>
+          <tbody id="previewTbody"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4">총 합계</td>
+              <td id="previewTotal">0</td>
+            </tr>
+          </tfoot>
+        </table>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="btn" id="previewPrint" type="button">인쇄</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 오른쪽 하단 플로팅 미리보기 버튼 -->
+<button class="fpv-btn" id="floatingPreviewBtn" type="button" title="선택 내역 미리보기">미리보기</button>
+
+<script>
+'use strict';
+if(!window.__BULKY_FLAGS__) window.__BULKY_FLAGS__ = { inited:false, printing:false };
+
+/************** 배너 데이터 (문자열 URL만 사용) **************/
+const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="520" height="280">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eaf0ff"/>
+      <stop offset="1" stop-color="#f9fbff"/>
+    </linearGradient></defs>
+    <rect width="100%" height="100%" fill="url(#g)"/>
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#2952ff" font-size="24" font-family="-apple-system,system-ui,Segoe UI,Roboto,Noto Sans KR">광고 이미지</text>
+  </svg>`);
+
+const ADS = [
+  {
+    image: "https://raw.githubusercontent.com/jsh0333/202509080300/main/banner_1_compressed.jpg",
+    title: "강동구 이사/정리 전문 · 오늘 방문 견적",
+    desc:  "당일 수거 · 카드/현금 영수증 · 온라인 예약 3% 할인",
+    href:  "https://blog.naver.com/jshjsh0333"
+  },
+  {
+    image: "https://raw.githubusercontent.com/jsh0333/202509080300/main/banner_2_compressed.jpg",
+    title: "송파·강동 집정리 · 빠른 방문",
+    desc:  "사진 견적 · 친절 상담 · 카드/현금",
+    href:  "https://blog.naver.com/jshjsh0333"
+  },
+  {
+    image: "https://raw.githubusercontent.com/jsh0333/202509080300/main/banner_3_compressed.jpg",
+    title: "대형폐기물 수거 · 합리요금",
+    desc:  "사다리차·폐기물 스티커 안내 포함",
+    href:  "https://blog.naver.com/jshjsh0333"
+  },
+  {
+    image: "https://raw.githubusercontent.com/jsh0333/202509080300/main/banner_4_compressed.jpg",
+    title: "유품정리 전문가 · 싹다정리",
+    desc:  "서울·경기 전지역 · 당일 가능",
+    href:  "https://blog.naver.com/jshjsh0333"
+  }
+];
+
+function withUtm(url, idx){
+  try{
+    const u=new URL(url, location.href);
+    u.searchParams.set('utm_source','bulky-fee-calc');
+    u.searchParams.set('utm_medium','banner');
+    u.searchParams.set('utm_campaign','local');
+    u.searchParams.set('utm_content', String(idx));
+    return u.toString();
+  }catch(e){ return url; }
+}
+
+let adIndex=0, adTimer=null;
+const el=sel=>document.querySelector(sel);
+
+function renderAd(idx){
+  const ad=ADS[idx%ADS.length];
+  const src = ((ad && ad.image) ? String(ad.image) : '').trim();
+  const title = ad?.title || '광고 이미지';
+  const desc  = ad?.desc  || '';
+  const href  = withUtm(ad?.href || '#', idx);
+
+  // 상단 배너 이미지
+  const imgEl = el('#adImg');
+  imgEl.src = src || PLACEHOLDER;
+  imgEl.alt = title;
+  imgEl.onerror = () => { imgEl.src = PLACEHOLDER; };
+
+  // 텍스트/링크
+  el('#adTitle').textContent = title;
+  el('#adDesc').textContent  = desc;
+  el('#adCard').href = href;
+
+  // 미리보기 박스 동기화
+  const pImg = el('#adPreviewImg');
+  const pTitle = el('#adPreviewTitle');
+  const pDesc = el('#adPreviewDesc');
+  const pLink = el('#adPreviewLink');
+  if(pImg){ pImg.src = src || PLACEHOLDER; pImg.alt = title; pImg.onerror = () => { pImg.src = PLACEHOLDER; }; }
+  if(pTitle) pTitle.textContent = title;
+  if(pDesc)  pDesc.textContent  = desc;
+  if(pLink)  pLink.href = href;
+
+  const dots=[...document.querySelectorAll('#adDots button')];
+  dots.forEach((b,i)=>b.classList.toggle('active', i===idx));
+}
+
+function buildDots(){
+  const dots=el('#adDots');
+  dots.innerHTML='';
+  if(ADS.length<=1){ dots.style.display='none'; return; }
+  dots.style.display='flex';
+  ADS.forEach((_,i)=>{
+    const b=document.createElement('button');
+    b.setAttribute('aria-label',`${i+1}번 광고 보기`);
+    b.addEventListener('click',()=>{ adIndex=i; renderAd(adIndex); restartAdTimer(); });
+    dots.appendChild(b);
+  });
+}
+
+function nextAd(){ adIndex=(adIndex+1)%ADS.length; renderAd(adIndex); }
+function restartAdTimer(){ if(adTimer) clearInterval(adTimer); if(ADS.length>1) adTimer=setInterval(nextAd,2000); }
+
+/************** 데이터셋 (원복) **************/
+const ITEMS = [
+  ['가구류','장롱','100cm이상 1쪽',15000],
+  ['가구류','장롱','100cm미만 1쪽',10000],
+  ['가구류','비키니 옷장','모든 규격',2000],
+  ['가구류','장식장','100cm 이상',9000],
+  ['가구류','장식장','100cm 미만',6000],
+  ['가구류','문갑','100cm 이상',4000],
+  ['가구류','문갑','100cm 미만',2000],
+  ['가구류','서랍장','5단 이상',5000],
+  ['가구류','서랍장','4단 이하',3000],
+  ['가구류','쇼파','4인용 이상',10000],
+  ['가구류','쇼파','3인용',7000],
+  ['가구류','쇼파','2인용',5000],
+  ['가구류','쇼파','1인용',3000],
+  ['가구류','식탁(테이블)','4인용 이상',5000],
+  ['가구류','식탁(테이블)','3인용 이하',2000],
+  ['가구류','식탁(테이블)','5인용 이상(대리석)',12000],
+  ['가구류','식탁(테이블)','4인용 이하(대리석)',8000],
+  ['가구류','싱크대','60cm 1짝당',3000],
+  ['가구류','책상','양수책상',7000],
+  ['가구류','책상','편수책상',4000],
+  ['가구류','책상','컴퓨터용 책상/ 서랍없음',3000],
+  ['가구류','책장','100cm 이상',8000],
+  ['가구류','책장','100cm 미만',5000],
+  ['가구류','책꽂이','4단 이하',4000],
+  ['가구류','책꽂이','2단 이하',2000],
+  ['가구류','침대','2인용 세트 (매트리스1개+틀)',15000],
+  ['가구류','침대','1인용 세트 (매트리스1개+틀)',10000],
+  ['가구류','침대','2인용(매트리스)',8000],
+  ['가구류','침대','1인용(매트리스)',5000],
+  ['가구류','침대','유아용 침대',3000],
+  ['가구류','침대','어린이 2층 침대',20000],
+  ['가구류','침대','2인용 돌침대 세트',30000],
+  ['가구류','침대','1인용 돌침대 세트',25000],
+  ['가구류','의자','1인용',2000],
+  ['가구류','의자','장의자',3000],
+  ['가구류','의자','바퀴달린의자(대형)',5000],
+  ['가구류','의자','바퀴달린의자(일반)',4000],
+  ['가구류','화장대','모든규격',5000],
+  ['가구류','신발장','1m이상',5000],
+  ['가구류','신발장','1m미만',2000],
+  ['가구류','옷걸이','모든 규격',2000],
+  ['가구류','다림이판','모든 규격',1000],
+  ['가구류','오디오장식장','모든 규격',3000],
+  ['가구류','TV 받침','모든 규격',3000],
+  ['가구류','밥상','4인 이상',2000],
+  ['가구류','밥상','3인 이하',1000],
+  ['가구류','진열대','모든 규격',3000],
+  ['가구류','차탁자','모든 규격',2000],
+  ['가구류','창문짝','모든규격',2000],
+  ['가구류','문짝','목재류',3000],
+  ['가구류','회의용 탁자','12인용 이상',9000],
+  ['가구류','회의용 탁자','8인용 이상',7000],
+  ['가구류','회의용 탁자','8인용 미만',5000],
+  // 가전제품류
+  ['가전제품류','냉장고','양문형 냉장고(700ℓ이상)',15000],
+  ['가전제품류','냉장고','양문형 냉장고(600ℓ이상)',12000],
+  ['가전제품류','냉장고','500ℓ이상',8000],
+  ['가전제품류','냉장고','300ℓ이상',6000],
+  ['가전제품류','냉장고','300ℓ미만',4000],
+  ['가전제품류','김치냉장고','130ℓ 이상',5000],
+  ['가전제품류','김치냉장고','130ℓ 미만',3000],
+  ['가전제품류','텔레비전','42인치 이상',7000],
+  ['가전제품류','텔레비전','25인치 이상',5000],
+  ['가전제품류','텔레비전','25인치 미만',3000],
+  ['가전제품류','텔레비전','TV받침일체형(40인치 미만)',7000],
+  ['가전제품류','세탁기','10kg 이상',5000],
+  ['가전제품류','세탁기','10kg 미만',3000],
+  ['가전제품류','가스오븐렌지','높이 1m이상',5000],
+  ['가전제품류','오디오','본체(높이 1m 이상)',5000],
+  ['가전제품류','오디오','스피커(높이 1m 이상)',1000],
+  ['가전제품류','에어컨','264㎡이상',8000],
+  ['가전제품류','에어컨','66㎡이상',5000],
+  ['가전제품류','에어컨','66㎡미만',3000],
+  ['가전제품류','온풍기','264㎡이상',8000],
+  ['가전제품류','온풍기','66㎡이상',5000],
+  ['가전제품류','온풍기','66㎡미만',3000],
+  ['가전제품류','공기청정기','높이 1m이상',5000],
+  ['가전제품류','난로','석유난로',3000],
+  ['가전제품류','정수기','높이 1m이상',5000],
+  ['가전제품류','보일러','16,000cal/h이상',12000],
+  ['가전제품류','보일러','16,000cal/h미만',8000],
+  ['가전제품류','자동판매기','음료/ 담배 등',15000],
+  ['가전제품류','자동판매기','자가/ 소형',3000],
+  ['가전제품류','선풍기','업소용(대형)',3000],
+  ['가전제품류','환풍기','업소용',3000],
+  ['가전제품류','환풍기','가정용',2000],
+  // 기타생활용품
+  ['기타생활용품','피아노','일반',15000],
+  ['기타생활용품','피아노','디지털(오르간 포함)',5000],
+  ['기타생활용품','쌀통','모든규격',3000],
+  ['기타생활용품','액자','높이 1m이상',3000],
+  ['기타생활용품','액자','높이 50cm~1m',2000],
+  ['기타생활용품','액자','높이 50cm 미만',1000],
+  ['기타생활용품','시계','높이 1m이상',3000],
+  ['기타생활용품','장판','3.3㎡당',2000],
+  ['기타생활용품','카페트','3.3㎡당',2000],
+  ['기타생활용품','이불','모든규격',2000],
+  ['기타생활용품','캐비넷','모든규격',4000],
+  ['기타생활용품','화일캐비넷','4단 이상',4000],
+  ['기타생활용품','화일캐비넷','4단 미만',3000],
+  ['기타생활용품','어항','2m 이상',9000],
+  ['기타생활용품','어항','1m 이상',5000],
+  ['기타생활용품','어항','1m 미만',3000],
+  ['기타생활용품','변기','양변기',8000],
+  ['기타생활용품','변기','좌변기',5000],
+  ['기타생활용품','세면대','모든 규격',3000],
+  ['기타생활용품','욕조','일반용',5000],
+  ['기타생활용품','욕조','유아용',3000],
+  ['기타생활용품','유리(거울/판유리)','1㎡당',2000],
+  ['기타생활용품','기타 목재','5kg 당',2000],
+  ['기타생활용품','기타 프라스틱류','5kg 당',2000],
+  ['기타생활용품','화분','높이 50cm이상',2000],
+  ['기타생활용품','화분','높이 50cm미만',1000],
+  ['기타생활용품','유모차(보행기)','모든규격',3000],
+  ['기타생활용품','인형/ 장난감류','대형(미끄럼틀/ 놀이집 등)',2000],
+  ['기타생활용품','인형/ 장난감류','소형(3kg당)',1000],
+  ['기타생활용품','자전거','성인용',3000],
+  ['기타생활용품','자전거','아동용(2륜)',3000],
+  ['기타생활용품','자전거','아동용(3륜)',2000],
+  ['기타생활용품','항아리','100ℓ 이상(대형)',5000],
+  ['기타생활용품','항아리','100ℓ 미만(중형)',3000],
+  ['기타생활용품','항아리','30ℓ 미만(소형)',2000],
+  ['기타생활용품','가방류','골프 가방',3000],
+  ['기타생활용품','가방류','가로 50cm 이상',3000],
+  ['기타생활용품','가방류','가로 50cm 미만',2000],
+  ['기타생활용품','쓰레기통','사무실용/ 옥외용',2000],
+  ['기타생활용품','쓰레기통','가정용',1000],
+  ['기타생활용품','목욕탕 수건함','모든 규격',1000],
+  ['기타생활용품','재봉틀','모든 규격',2000],
+  ['기타생활용품','고무통','지름100cm이상',5000],
+  ['기타생활용품','고무통','지름50cm이상',3000],
+  ['기타생활용품','고무통','지름50cm미만',2000],
+  ['기타생활용품','병풍','2폭당',1000],
+  ['기타생활용품','러닝머신','모든 규격',10000],
+  ['기타생활용품','빨래건조대','모든 규격',2000],
+  ['기타생활용품','옥매트','2인용',7000],
+  ['기타생활용품','옥매트','1인용',4000],
+  ['기타생활용품','배기후드','모든 규격',2000],
+  ['기타생활용품','아이스박스','대형',2000],
+  ['기타생활용품','아이스박스','소형',1000],
+  ['기타생활용품','스키','모든 규격',2000],
+  ['기타생활용품','보드','모든 규격',2000],
+  ['기타생활용품','안마의자','모든 규격',20000],
+  ['기타생활용품','소화기','3.3kg이하',1000],
+  ['기타생활용품','소화기','3.3kg~5kg',2000],
+  ['기타생활용품','소화기','5kg~10kg',3000],
+  ['기타생활용품','소화기','10kg~15kg',4000],
+  ['기타생활용품','소화기','15kg이상',5000],
+  ['기타생활용품','기타(품목없음)','모든 규격',0],
+  // 무상수거제품
+  ['무상수거제품','VTR/DVD','모든 규격',0],
+  ['무상수거제품','가 습 기','모든 규격',0],
+  ['무상수거제품','가스레인지','모든 규격',0],
+  ['무상수거제품','가스오븐렌지','높이 1m미만',0],
+  ['무상수거제품','공기청정기','높이 1m미만',0],
+  ['무상수거제품','노트북컴퓨터','모든 규격',0],
+  ['무상수거제품','녹즙(믹서)기','모든 규격',0],
+  ['무상수거제품','다리미','모든 규격',0],
+  ['무상수거제품','모뎀','모든 규격',0],
+  ['무상수거제품','보온밥통(솥)','모든 규격',0],
+  ['무상수거제품','복합기','모든 규격',0],
+  ['무상수거제품','선풍기','가정용',0],
+  ['무상수거제품','스캐너','모든 규격',0],
+  ['무상수거제품','시계(전기및 건전지 사용)','1m미만',0],
+  ['무상수거제품','에어컨실외기','모든 규격',0],
+  ['무상수거제품','오디오셋트','높이 1m미만',0],
+  ['무상수거제품','전화기','모든 규격',0],
+  ['무상수거제품','전기밥솥','모든 규격',0],
+  ['무상수거제품','전기장판','모든 규격',0],
+  ['무상수거제품','전기히터','모든 규격',0],
+  ['무상수거제품','전자렌지','모든 규격',0],
+  ['무상수거제품','정수기','높이 1m미만',0],
+  ['무상수거제품','청소기','모든 규격',0],
+  ['무상수거제품','카세트라디오','모든 규격',0],
+  ['무상수거제품','컴퓨터 본체','모든 규격',0],
+  ['무상수거제품','모니터','모든 규격',0],
+  ['무상수거제품','키보드','모든 규격',0],
+  ['무상수거제품','컴퓨터오락기','모든 규격',0],
+  ['무상수거제품','탈수기','모든 규격',0],
+  ['무상수거제품','토스터기','모든 규격',0],
+  ['무상수거제품','팩시밀리','모든 규격',0],
+  ['무상수거제품','프린터기','모든 규격',0],
+  ['무상수거제품','헤어드라이기','모든 규격',0]
+];
+
+/************** 유틸/렌더/이벤트 **************/
+const $ = sel=>document.querySelector(sel);
+const state = { qty:{} };
+let catFirstRow = {};
+function money(n){ return (Number(n)||0).toLocaleString('ko-KR'); }
+function decodeSelParam(v){ try{ let s=decodeURIComponent(v); try{s=decodeURIComponent(s);}catch(e){} const obj=JSON.parse(s); return (obj&&typeof obj==='object')?obj:{}; }catch(e){ return {}; } }
+function canUseHistoryReplace(){ try{ return /^https?:$/.test(location.protocol) && !!(history&&history.replaceState) && location.origin!=='null'; }catch(e){ return false; } }
+function buildShareQS(){ const params=new URLSearchParams(); const slim={}; for(const [k,v] of Object.entries(state.qty)) if(v>0) slim[k]=v; if(Object.keys(slim).length){ const json=JSON.stringify(slim); const doubleEncoded=encodeURIComponent(encodeURIComponent(json)); params.set('sel', doubleEncoded); } return params.toString()?('?'+params.toString()):''; }
+
+function render(){ const tbody=$('#tbody'); if(!tbody) return; tbody.innerHTML=''; catFirstRow={}; const frag=document.createDocumentFragment(); ITEMS.forEach((it,idx)=>{ const [cat,name,rule,price]=it; const key=String(idx); const qty=state.qty[key]||0; const tr=document.createElement('tr'); tr.dataset.cat=cat; if(!(cat in catFirstRow)) catFirstRow[cat]=tr; tr.innerHTML=`
+  <td class="hide-on-mobile">${cat}</td>
+  <td class="left">${name}</td>
+  <td>${rule||'-'}</td>
+  <td>${money(price)}</td>
+  <td>
+    <div class="qtybox">
+      <span class="qbtn" data-k="${key}" data-d="-1" role="button" aria-label="감소" tabindex="0">−</span>
+      <span class="qty" id="q_${key}">${qty}</span>
+      <span class="qbtn" data-k="${key}" data-d="1" role="button" aria-label="증가" tabindex="0">＋</span>
+    </div>
+  </td>
+  <td id="amt_${key}">${money(price*qty)}</td>`; frag.appendChild(tr); }); tbody.appendChild(frag); updateTotal(); }
+
+function updateTotal(){ let total=0; for(const [key,qty] of Object.entries(state.qty)){ const price=ITEMS[+key][3]; total+=price*qty; const amt=$('#amt_'+key); const qsp=$('#q_'+key); if(amt) amt.textContent=money(price*qty); if(qsp) qsp.textContent=qty; } $('#grandTotal').textContent='총 합계: '+money(total)+' 원'; const qs=buildShareQS(); if(canUseHistoryReplace()){ try{ history.replaceState(null,'', location.pathname+qs+location.hash); }catch(e){} } try{ localStorage.setItem('bulky_fee_qty', JSON.stringify(state.qty)); }catch(e){} }
+
+function handleDelta(target){ const btn=target.closest?target.closest('.qbtn'):target; if(!btn||!btn.classList||!btn.classList.contains('qbtn')) return; const k=btn.getAttribute('data-k'); let d=parseInt(btn.getAttribute('data-d'),10); if(isNaN(d)){ const t=(btn.textContent||'').trim(); d=(t==='+'||t==='＋')?1:-1; } const cur=state.qty[k]||0; state.qty[k]=Math.max(0, cur+d); updateTotal(); }
+
+function openPreview(){ const modal=$('#previewModal'); const body=$('#previewBody'); const empty=$('#previewEmpty'); const tbodyP=$('#previewTbody'); const totalP=$('#previewTotal'); tbodyP.innerHTML=''; let any=false,total=0; Object.entries(state.qty).forEach(([k,qty])=>{ if(qty<=0) return; any=true; const [cat,name,rule,price]=ITEMS[+k]; const amt=price*qty; const tr=document.createElement('tr'); tr.innerHTML=`<td>${name}</td><td>${rule||'-'}</td><td>${money(price)}</td><td>${qty}</td><td>${money(amt)}</td>`; tbodyP.appendChild(tr); total+=amt; }); totalP.textContent=money(total); empty.style.display=any?'none':'block'; body.style.display=any?'block':'none'; modal.classList.add('show'); }
+
+function printPreviewOnePage(){ if(window.__BULKY_FLAGS__.printing) return; window.__BULKY_FLAGS__.printing=true; const prev=document.getElementById('__print__'); if(prev) try{ prev.remove(); }catch(e){} const modalSheet=document.querySelector('#previewModal .sheet'); const previewTable=document.querySelector('#previewModal .sheet table'); if(!modalSheet||!previewTable){ window.print(); window.__BULKY_FLAGS__.printing=false; return; } const printablePx=(function mmToPx(mm){ const t=document.createElement('div'); t.style.width='1mm'; t.style.position='absolute'; t.style.left='-99999px'; document.body.appendChild(t); const px=t.getBoundingClientRect().width; t.remove(); return mm*px; })(297-20); let meas=document.createElement('div'); meas.id='___printMeasure'; meas.style.cssText='position:absolute;left:-10000px;top:0;'; const probe=modalSheet.cloneNode(true); Object.assign(probe.style,{ width:'190mm', maxHeight:'none', boxShadow:'none', border:'none' }); meas.appendChild(probe); document.body.appendChild(meas); const contentPx=probe.getBoundingClientRect().height; meas.remove(); const zoom=Math.max(0.6, Math.min(0.98, printablePx/Math.max(1, contentPx))); document.documentElement.style.setProperty('--print-zoom', String(zoom)); const host=document.createElement('div'); host.id='__print__'; const title=document.createElement('h3'); title.textContent='대형폐기물 배출 내역'; title.style.cssText='margin:0 0 8px;font-size:14px;text-align:center;'; const tableClone=previewTable.cloneNode(true); host.appendChild(title); host.appendChild(tableClone); document.body.appendChild(host); const cleanup=()=>{ try{ document.documentElement.style.setProperty('--print-zoom','1'); }catch(e){} try{ host.remove(); }catch(e){} window.__BULKY_FLAGS__.printing=false; }; const mql=window.matchMedia('print'); const onChange=(e)=>{ if(!e.matches){ cleanup(); mql.removeEventListener('change', onChange); } }; try{ mql.addEventListener('change', onChange); }catch(e){} window.addEventListener('afterprint', cleanup, { once:true }); setTimeout(()=>{ cleanup(); try{ mql.removeEventListener('change', onChange); }catch(e){} }, 5000); setTimeout(()=>window.print(), 20); }
+
+function computeOffsets(){
+  const adH = document.getElementById('adbarWrap')?.getBoundingClientRect().height||160;
+  const headerH = document.querySelector('header')?.getBoundingClientRect().height||70;
+  const totalH = document.getElementById('totalBar')?.getBoundingClientRect().height||56;
+  document.documentElement.style.setProperty('--theadTop', (adH + headerH) + 'px');
+  document.documentElement.style.setProperty('--theadTopMobile', (adH + headerH) + 'px');
+  document.documentElement.style.setProperty('--adbarH', adH + 'px');
+  document.documentElement.style.setProperty('--bottomSafe', (totalH + 28) + 'px');
+}
+
+function init(){ if(window.__BULKY_FLAGS__.inited) return; window.__BULKY_FLAGS__.inited=true;
+  buildDots(); renderAd(adIndex); restartAdTimer();
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ if(adTimer) clearInterval(adTimer); } else { restartAdTimer(); } });
+  computeOffsets(); window.addEventListener('resize', computeOffsets); window.addEventListener('orientationchange', computeOffsets);
+  document.getElementById('tbody').addEventListener('click', (e)=>handleDelta(e.target));
+  document.getElementById('tbody').addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ handleDelta(e.target); e.preventDefault(); } });
+  document.getElementById('previewBtn').addEventListener('click', openPreview);
+  document.getElementById('floatingPreviewBtn').addEventListener('click', openPreview);
+  document.getElementById('previewClose').addEventListener('click', ()=> $('#previewModal').classList.remove('show'));
+  document.getElementById('previewBackdrop').addEventListener('click', ()=> $('#previewModal').classList.remove('show'));
+  document.getElementById('previewPrint').addEventListener('click', printPreviewOnePage);
+  document.getElementById('clearBtn').addEventListener('click', ()=>{ state.qty={}; try{ localStorage.removeItem('bulky_fee_qty'); }catch(e){} updateTotal(); render(); });
+  document.getElementById('category').addEventListener('change', (e)=>{ const v=e.target.value; if(v==='ALL'){ window.scrollTo({top:0, behavior:'smooth'}); return; } const row=catFirstRow[v]; if(row){ row.classList.remove('jump-flash'); void row.offsetWidth; row.classList.add('jump-flash'); row.scrollIntoView({behavior:'smooth', block:'center'}); } });
+  try{ const url=new URL(location.href, 'http://dummy.local'); const sel=url.searchParams.get('sel'); if(sel){ const q=decodeSelParam(sel); for(const k in q){ const n=parseInt(q[k],10); if(!Number.isNaN(n)&&n>0) state.qty[k]=n; } } }catch(e){}
+  try{ const saved=JSON.parse(localStorage.getItem('bulky_fee_qty')||'{}'); if(saved && typeof saved==='object'){ for(const k in saved){ if(state.qty[k]==null||state.qty[k]===0){ const n=parseInt(saved[k],10); if(!Number.isNaN(n)&&n>0) state.qty[k]=n; } } } }catch(e){}
+  render(); }
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+</script>
+</body>
+</html>
